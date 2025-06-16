@@ -1,0 +1,43 @@
+@startuml
+!include <C4/C4_Component>
+
+title Компонентная диаграмма сервиса "Rules Engine"
+
+System_Boundary(rules_engine, "Домен: Автоматизация") {
+    Container_Boundary(rules_engine_service, "Rules Engine Service") {
+        Component(rule_processor, "Rule Processor", "Go", "Обработка правил и условий")
+        Component(scenario_executor, "Scenario Executor", "Go", "Выполнение действий по сценариям")
+        Component(event_subscriber, "Event Subscriber", "Go", "Подписка на события из Event Bus")
+        Component(api_handler, "API Handler", "Go", "Обработка входящих запросов через API Gateway")
+        Component(logging_metrics, "Logging & Metrics", "OTLP", "Сбор логов и метрик")
+
+        Container_Boundary(config_management, "Управление конфигурацией") {
+            Component(config_loader, "Config Loader", "Go", "Загрузка конфигураций для партнерских интеграций")
+            Component(config_validator, "Config Validator", "Go", "Проверка корректности конфигураций")
+        }
+
+        Rel(rule_processor, scenario_executor, "Запуск сценария", "gRPC")
+        Rel(event_subscriber, rule_processor, "Триггер события", "Kafka")
+        Rel(api_handler, rule_processor, "Управление правилами", "REST")
+    }
+    
+    Container(scenario_db, "Scenarios DB", "PostgreSQL", "Хранение правил и триггеров")
+}
+
+' Внешние зависимости
+Container(event_bus, "Event Bus", "Kafka", "Асинхронная коммуникация")
+Container(api_gateway, "API Gateway", "Go", "Единая точка входа для API")
+Container(monitoring, "Monitoring", "Prometheus/Grafana", "Мониторинг и логирование")
+
+' Связи с внешними системами
+Rel(api_gateway, api_handler, "gRPC", "Входящие запросы")
+Rel(rule_processor, scenario_db, "SQL", "Чтение/запись правил")
+Rel(event_subscriber, event_bus, "Kafka", "Подписка на события")
+
+Rel(scenario_executor, event_bus, "Управление правилами", "REST")
+
+Rel(config_loader, config_validator, "Validation", "Проверка конфигураций")
+
+Rel(logging_metrics, monitoring, "OTLP", "Метрики и логи")
+
+@enduml

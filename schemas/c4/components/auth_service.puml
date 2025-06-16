@@ -1,0 +1,49 @@
+@startuml
+!include <C4/C4_Component>
+
+title Компонентная диаграмма: Auth Service
+
+Person(user, "Пользователь", "Владелец умного дома")
+Person(admin, "Администратор", "Управляет системой")
+
+Container(api_gateway, "API Gateway", "Маршрутизация запросов")
+Container(monitoring, "Monitoring", "Prometheus/OTLP", "Мониторинг метрик")
+
+System_Boundary(rules_engine, "Домен: Пользователи") {
+    Container_Boundary(auth_service_boundary, "Auth Service") {
+        Component(auth_api, "Authentication API", "Go", "REST/gRPC интерфейс для аутентификации")
+        Component(token_service, "Token Service", "Go", "Генерация и проверка JWT-токенов")
+        Component(user_management, "User Management", "Go", "Управление профилями и ролями")
+        Component(rbac_engine, "RBAC Engine", "Go", "Контроль доступа по ролям")
+        Component(external_providers, "External Auth Providers", "Go", "Интеграция с OAuth/SSO (Google, Yandex)")
+        Component(db_adapter, "Database Adapter", "Go", "SQL-интерфейс для работы с User DB")
+
+        Boundary(config_management, "Управление конфигурацией") {
+            Component(config_loader, "Config Loader", "Go", "Загрузка конфигураций для партнерских интеграций")
+            Component(config_validator, "Config Validator", "Go", "Проверка корректности конфигураций")
+        }
+
+        Component(logging_metrics, "Logging & Metrics", "OTLP", "Сбор логов и метрик")
+
+    }
+
+    Container(user_db, "User DB", "PostgreSQL", "Хранение профилей и ролей")
+}
+
+Rel(auth_api, token_service, "Вызов", "gRPC")
+Rel(auth_api, user_management, "Вызов", "gRPC")
+Rel(auth_api, rbac_engine, "Проверка прав", "gRPC")
+Rel(auth_api, external_providers, "Интеграция", "HTTPS/OAuth2")
+
+Rel(db_adapter, user_db, "SQL", "PostgreSQL")
+Rel(token_service, db_adapter, "Запрос данных", "gRPC")
+Rel(user_management, db_adapter, "CRUD операции", "gRPC")
+
+Rel(api_gateway, auth_api, "HTTPS/gRPC", "Проверка токенов")
+
+' Конфиг
+Rel(config_loader, config_validator, "Validation", "Проверка конфигураций")
+
+Rel(logging_metrics, monitoring, "OTLP", "Метрики и трейсинг")
+
+@enduml

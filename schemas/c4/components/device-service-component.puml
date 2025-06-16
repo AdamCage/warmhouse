@@ -1,0 +1,47 @@
+@startuml
+!include <C4/C4_Component>
+
+title Компонентная диаграмма сервиса "Device Service"
+
+Container_Boundary(domen, "Домен: Устройства") {
+    Container_Boundary(device_service, "Сервис Управления Устройствами - Device Service") {
+        Boundary(config_management, "Управление конфигурацией") {
+            Component(config_loader, "Config Loader", "Go", "Загрузка конфигураций для партнерских интеграций")
+            Component(config_validator, "Config Validator", "Go", "Проверка корректности конфигураций")
+        }
+
+        Component(app_layer, "Application Layer", "Go", "Обработка входящих запросов")
+        Component(domain_layer, "Domain Layer", "Go", "Бизнес-логика управления устройствами")
+        Component(infra_layer, "Infrastructure Layer", "Go", "Интеграция с внешними системами")
+
+        Component(logging_metrics, "Logging & Metrics", "OTLP", "Сбор логов и метрик")
+
+        Rel(app_layer, domain_layer, "Вызовы бизнес-логики", "In-process")
+        Rel(domain_layer, infra_layer, "Интеграция с инфраструктурой", "In-process")
+    }
+
+    ContainerDb(device_db, "Device DB", "PostgreSQL", "Хранение метаданных устройств")
+}
+
+' Внешние зависимости
+
+ContainerQueue(mqtt_broker, "MQTT Broker", "EMQX", "Обмен сообщениями с устройствами")
+ContainerQueue(event_bus, "Event Bus", "Kafka", "Асинхронная коммуникация")
+Container(api_gateway, "API Gateway", "Go", "Единая точка входа для API")
+Container(monitoring, "Monitoring", "Prometheus/OTEL", "Сбор метрик")
+
+' Связи между компонентами и внешними системами
+Rel(app_layer, api_gateway, "Входящие запросы", "gRPC")
+Rel(infra_layer, device_db, "SQL", "PostgreSQL")
+Rel(infra_layer, mqtt_broker, "MQTT команды", "MQTT")
+Rel(infra_layer, event_bus, "События устройств", "Kafka")
+
+' Подписки на события (необязательно, но можно добавить)
+Rel(event_bus, app_layer, "Триггеры для устройств", "Kafka")
+
+' Конфиг
+Rel(config_loader, config_validator, "Validation", "Проверка конфигураций")
+
+Rel(logging_metrics, monitoring, "OTLP", "Метрики и трейсинг")
+
+@enduml

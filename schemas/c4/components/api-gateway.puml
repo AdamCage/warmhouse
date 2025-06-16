@@ -1,0 +1,77 @@
+@startuml
+!include <C4/C4_Component>
+
+title Компонентная диаграмма API Gateway системы "Тёплый Дом"
+
+Person(user, "Пользователь", "Владелец умного дома")
+Person(installer, "Монтажник", "Регистрация устройств")
+Person(admin, "Администратор", "Управление системой")
+
+System_Ext(monitoring, "Monitoring", "Grafana/Prometheus", "Мониторинг")
+System_Ext(auth_service, "Auth Service", "Go", "Аутентификация")
+System_Ext(device_service, "Device Service", "Go", "Управление устройствами")
+System_Ext(rules_engine, "Rules Engine", "Go", "Автоматизация")
+
+Container_Boundary(api_gateway_boundary, "API Gateway") {
+    Component(http_server, "HTTP Server", "Go", "Обработка входящих HTTP-запросов")
+    Component(grpc_client, "gRPC Client", "Go", "Вызов микросервисов через gRPC")
+    Component(auth_middleware, "Auth Middleware", "Go", "Проверка токенов JWT")
+    Component(rate_limiter, "Rate Limiter", "Go", "Защита от DDoS")
+    Component(logging_metrics, "Logging & Metrics", "OTLP", "Сбор логов и метрик")
+    Component(caching, "Caching", "Redis", "Кэширование ответов")
+
+    Container_Boundary(config_management, "Управление конфигурацией") {
+        Component(config_loader, "Config Loader", "Go", "Загрузка конфигураций для партнерских интеграций")
+        Component(config_validator, "Config Validator", "Go", "Проверка корректности конфигураций")
+    }
+
+}
+
+' Внешние связи
+Rel(user, http_server, "HTTPS", "Пользователь -> Web UI/Mobile App")
+Rel(installer, http_server, "HTTPS", "Монтажник -> Mobile App")
+Rel(admin, http_server, "HTTPS", "Администратор -> Admin Panel")
+Rel(http_server, auth_middleware, "Проверка токена", "JWT")
+Rel(auth_middleware, auth_service, "Проверка токена", "HTTPS")
+Rel(auth_middleware, grpc_client, "Доступ разрешён", "")
+Rel(grpc_client, device_service, "gRPC", "Управление устройствами")
+Rel(grpc_client, rules_engine, "gRPC", "Сценарии автоматизации")
+Rel(logging_metrics, monitoring, "OTLP", "Метрики и трейсинг")
+Rel(rate_limiter, http_server, "Лимиты", "Rate Limiting")
+Rel(caching, http_server, "Кэширование", "Redis")
+Rel(config_loader, config_validator, "Validation", "Проверка конфигураций")
+
+' Описание компонентов
+note right of http_server
+  Принимает HTTP-запросы от клиентов (Web UI, Mobile App, Admin Panel).
+  Перенаправляет их в Auth Middleware для проверки прав доступа.
+end note
+
+note right of auth_middleware
+  Проверяет JWT-токены через Auth Service.
+  Блокирует запросы без валидного токена.
+end note
+
+note right of grpc_client
+  Вызывает методы микросервисов:
+  - Device Service (управление устройствами)
+  - Rules Engine (автоматизация)
+end note
+
+note right of rate_limiter
+  Ограничивает количество запросов на IP/токен.
+  Предотвращает перегрузку сервисов.
+end note
+
+note right of logging_metrics
+  Отправляет метрики и логи в Monitoring.
+  Использует OpenTelemetry для распределённого трейсинга.
+end note
+
+note right of caching
+  Кэширует часто запрашиваемые данные:
+  - Состояние устройств
+  - Список сценариев
+end note
+
+@enduml

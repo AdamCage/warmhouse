@@ -1,7 +1,5 @@
 # Project_template
 
-Это шаблон для решения проектной работы. Структура этого файла повторяет структуру заданий. Заполняйте его по мере работы над решением.
-
 # Задание 1. Анализ и планирование
 
 ### 1. Описание функциональности монолитного приложения
@@ -88,9 +86,10 @@ sequenceDiagram
 ```mermaid
 graph TD
     A[Умный Дом] --> B[Управление Устройствами]
-    A --> C[Телеметрия]
     A --> D[Автоматизация]
     A --> E[Пользователи]
+    A --> G[Инфраструктура]
+    A --> I[Фронт]
 ```
 
 #### 1. Домен "Управление Устройствами"
@@ -130,41 +129,8 @@ graph LR
 - Сервисы: `DeviceRegistrationService`, `DeviceConfigurationService`
 - Репозиторий: `DeviceRepository`
 - События: `DeviceRegistered`, `DeviceStatusChanged`
-
-#### 2. Домен  **"Телеметрия"**
-
-**Ответственность:**
-
-- Сбор данных с устройств
-- Хранение временных рядов показаний
-- Агрегация и предварительная обработка данных
-- Генерация событий о критических изменениях
-
-**Границы контекста:**
-
-```mermaid
-graph TD
-    A[Телеметрия] --> B[Сбор данных]
-    A --> C[Хранение]
-    A --> D[Агрегация]
     
-    B --> E[Пуш-модель]
-    B --> F[Пулл-модель]
-    
-    C --> G[Timeseries DB]
-    C --> H[Сжатие данных]
-    
-    D --> I[Средние значения]
-    D --> J[Пиковые значения]
-```
-
-**Ключевые элементы:**
-- Агрегат  `TelemetryStream`
-- Сервисы:  `DataIngestionService`, `TelemetryAnalyticsService`
-- Репозиторий:  `TelemetryRepository`
-- События:  `TelemetryReceived`, `AnomalyDetected`
-    
-#### 3. Домен  **"Автоматизация"**
+#### 2. Домен  **"Автоматизация"**
 
 **Ответственность:**
 
@@ -192,14 +158,8 @@ graph LR
     D --> J[Управление устройствами]
     D --> K[Уведомления]
 ```
-
-**Ключевые элементы:**
-- Агрегат `AutomationScenario`
-- Сервисы: `RuleEngineService`, `ScenarioExecutionService`
-- Репозиторий:  `ScenarioRepository`
-- События: `ScenarioTriggered`, `ActionExecuted`
     
-#### 4. Домен  **"Пользователи и Доступ"**
+#### 3. Домен  **"Пользователи и Доступ"**
 
 **Ответственность:**
 - Управление пользователями и организациями
@@ -224,20 +184,15 @@ graph TD
     D --> I[RBAC]
     D --> J[ABAC]
 ```
-
-**Ключевые элементы:**
-- Агрегат `User`
-- Сервисы: `AuthService`, `PermissionService`
-- Репозиторий: `UserRepository`
-- События: `UserRegistered`, `AccessGranted`
     
-#### 5. Домен  **"Управление Инфраструктурой"**
+#### 4. Домен  **"Управление Инфраструктурой"**
 
 **Ответственность:**
 - Мониторинг состояния системы
 - Управление обновлениями
 - Конфигурация среды
 - Обработка ошибок
+- Интеграция с партнерскими устройствами
     
 **Границы контекста:**
 
@@ -246,6 +201,7 @@ graph LR
     A[Инфраструктура] --> B[Мониторинг]
     A --> C[Обновления]
     A --> D[Конфигурация]
+    A --> K[Интеграция]
     
     B --> E[Метрики]
     B --> F[Логи]
@@ -255,13 +211,43 @@ graph LR
     
     D --> I[Переменные среды]
     D --> J[Динамическая конфигурация]
+
+    K --> O[Партнерские устройства]
+    
 ```
 
-**Ключевые элементы:**
+#### 5. Домен  **"Фронт"**
 
-- Сервисы: `MonitoringService`, `ConfigurationService`
-- Репозиторий: `EnvironmentRepository`
-- События: `SystemHealthChanged`, `ConfigurationUpdated`
+**Ответственность:**
+- Предоставление интерфейсов для взаимодействия с системой:
+    - **Web UI** — для пользователей (управление устройствами, просмотр телеметрии, настройка сценариев).
+    - **Mobile App** — для монтажников (регистрация устройств, диагностика подключения).
+    - **Admin Panel** — для администраторов (управление пользователями, мониторинг системных метрик).
+- Поддержка разных ролей (пользователь, монтажник, администратор) с ограниченными правами.
+- Интеграция с API Gateway для аутентификации и вызова backend-сервисов.
+    
+**Границы контекста:**
+
+```mermaid
+graph LR
+    A[Фронт] --> B[Web UI]
+    A --> C[Mobile App]
+    A --> D[Admin Panel]
+    A --> E[API Gateway]
+    
+    B --> F[Управление устройствами]
+    B --> G[Просмотр телеметрии]
+    B --> H[Сценарии автоматизации]
+    
+    C --> I[Регистрация устройств]
+    C --> J[Диагностика подключения]
+    
+    D --> K[Управление пользователями]
+    D --> L[Мониторинг системных метрик]
+    
+    E --> M[Аутентификация через Auth Service]
+    E --> N[Вызовы Device/Telemetry/Rule Engine API]
+```
 
 ### **4. Проблемы монолитного решения**
 
@@ -370,39 +356,75 @@ graph TD
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-![](schemas/c4-level1.png)
+![](schemas/images/c4-context.png)
 
-[c4-level1.puml](schemas/c4-level1.puml)
+[c4-containers.puml](schemas/c4-context.puml)
 
 # Задание 2. Проектирование микросервисной архитектуры
 
-В этом задании вам нужно предоставить только диаграммы в модели C4. Мы не просим вас отдельно описывать получившиеся микросервисы и то, как вы определили взаимодействия между компонентами To-Be системы. Если вы правильно подготовите диаграммы C4, они и так это покажут.
+## **Диаграмма контейнеров (Containers)**
 
-**Диаграмма контейнеров (Containers)**
+![](schemas/c4/containers/c4-containers.png)
 
-Добавьте диаграмму.
+[c4-context.puml](schemas/c4/containers/c4-containers.puml)
 
-**Диаграмма компонентов (Components)**
+## **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+### 1. API Gateway
 
-**Диаграмма кода (Code)**
+![](schemas/c4/components/api-gateway.png)
 
-Добавьте одну диаграмму или несколько.
+[c4-components-api-gateway.puml](schemas/c4/components/api-gateway.puml)
+
+### 2. Auth Service
+
+![](schemas/c4/components/auth_service.png)
+
+[c4-components-api-auth-service.puml](schemas/c4/components/auth_service.puml)
+
+### 3. Device Service
+
+![](schemas/c4/components/device-service-component.png)
+
+[c4-components-device-service.puml](schemas/c4/components/device-service-component.puml)
+
+### 4. Partner-Api-Gateway
+
+![](schemas/c4/components/partner-api-gateway.png)
+
+[c4-components-partner-api-gateway.puml](schemas/c4/components/partner-api-gateway.puml)
+
+### 5. Rules Engine
+
+![](schemas/c4/components/rules_engine.png)
+
+[c4-components-rules_engine.puml](schemas/c4/components/rules_engine.puml)
+
+## **Диаграмма кода (Code)**
+
+### 1. Device Service
+
+![](schemas/c4/code/device-service/class.png)
+
+[c4-code-device-service-class.puml](schemas/c4/code/device-service/class.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
-Добавьте сюда ER-диаграмму. Она должна отражать ключевые сущности системы, их атрибуты и тип связей между ними.
+![](schemas/er/er.png)
+
+[c4-code-device-service-class.puml](schemas/er/er.puml)
+
 
 # Задание 4. Создание и документирование API
 
 ### 1. Тип API
 
-Укажите, какой тип API вы будете использовать для взаимодействия микросервисов. Объясните своё решение.
+- Для взаимодействия между микросервисами внутри системы подойдет REST API.
+- Асинхронное взаимодействие будет использоваться для взаимодействия с брокерами отправки команд управления и нотификации пользователей.
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+[**Swagger**](openapi/openapi.yaml)
 
 # Задание 5. Работа с docker и docker-compose
 
