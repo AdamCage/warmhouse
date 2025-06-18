@@ -47,6 +47,36 @@ services:
     networks:
       - smarthome-network
 
+  device-service:
+    build:
+      context: ./device-service
+      dockerfile: Dockerfile
+    container_name: device-service
+    ports:
+      - "8083:8083"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres:5432/smarthome
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smarthome-network
+
+  rules-engine:
+    build:
+      context: ./rules-engine
+      dockerfile: Dockerfile
+    container_name: rules-engine
+    ports:
+      - "8084:8084"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres:5432/smarthome
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smarthome-network
+
   app:
     build:
       context: ./smart_home
