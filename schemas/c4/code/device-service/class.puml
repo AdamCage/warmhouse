@@ -1,0 +1,65 @@
+@startuml
+!include <C4/C4_Component>
+
+title Классовая диаграмма Device Service
+
+package "Device Service" {
+    class DeviceService {
+        +RegisterDevice()
+        +GetDeviceStatus()
+        +UpdateDeviceConfig()
+    }
+
+    class DeviceAPIHandler {
+        +HandleRegisterDevice()
+        +HandleGetDeviceStatus()
+    }
+
+    class DeviceManager {
+        +ValidateDeviceConfig()
+        +PersistDevice()
+        +SendMQTTCommand()
+    }
+
+    class DeviceRepository {
+        +Save()
+        +FindById()
+        +Update()
+    }
+
+    class MQTTClient {
+        +PublishCommand()
+        +SubscribeToResponses()
+    }
+
+    class EventProducer {
+        +PublishDeviceRegistered()
+        +PublishDeviceUpdated()
+    }
+
+    class ConfigValidator {
+        +Validate()
+        +LoadSchema()
+    }
+}
+
+package "External Dependencies" {
+    class PostgreSQL
+    class Kafka
+    class MQTTBroker
+}
+
+' Связи
+DeviceService --> DeviceAPIHandler : Использует
+DeviceAPIHandler --> DeviceManager : Вызывает
+DeviceManager --> DeviceRepository : Работа с БД
+DeviceManager --> MQTTClient : MQTT-команды
+DeviceManager --> EventProducer : События
+DeviceManager --> ConfigValidator : Проверка конфигурации
+
+DeviceRepository --> PostgreSQL : SQL
+MQTTClient --> MQTTBroker : MQTT
+EventProducer --> Kafka : Kafka Producer
+
+ConfigValidator --> "partner_api" : Загрузка схем
+@enduml

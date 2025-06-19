@@ -1,0 +1,82 @@
+@startuml
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+title Контейнерная диаграмма системы "Тёплый Дом"
+
+Person(user, "Пользователь", "Владелец умного дома\n- Управляет системой\n- Просматривает телеметрию")
+Person(installer, "Монтажник", "Технический специалист\n- Устанавливает датчики\n- Регистрирует устройства\n- Проверяет подключение")
+Person(admin, "Администратор", "Управляет системой")
+
+System_Ext(partner_device, "Устройство партнёра", "Стороннее IoT-устройство")
+System_Ext(user_device, "Устройство пользователя", "Датчики/реле умного дома")
+
+System_Boundary(system, "Экосистема Умного Дома") {
+
+    Container_Boundary(infra, "Домен: Инфраструктура") {
+        Container(monitoring, "Monitoring", "Grafana/Prometheus", "Мониторинг\nВзаимодействует со всеми контейнерами [OTEL]")
+        Container(partner_api, "Partner API Gateway", "Go", "Интеграция с партнёрами")
+        Container(api_gateway, "API Gateway", "Go", "Единая точка входа для API")
+        ContainerQueue(event_bus, "Event Bus", "Kafka", "Асинхронная коммуникация")
+        ContainerQueue(mqtt_broker, "MQTT Broker", "EMQX", "Обмен с устройствами")
+    }
+
+    Container_Boundary(users, "Домен: Пользователи") {
+        Container(auth_service, "Auth Service", "Go", "Аутентификация и авторизация")
+        ContainerDb(user_db, "User DB", "PostgreSQL", "Профили пользователей, роли")
+    }
+
+    Container_Boundary(devices, "Домен: Устройства") {
+        Container(device_service, "Device Service", "Go", "Регистрация устройств")
+        ContainerDb(device_db, "Device DB", "PostgreSQL", "Метаданные устройств")
+    }
+
+    Container_Boundary(automation, "Домен: Автоматизация") {
+        Container(rules_engine, "Rules Engine", "Go", "Выполнение сценариев")
+        ContainerDb(scenario_db, "Scenarios DB", "PostgreSQL", "Хранение правил")
+    }
+
+    Container_Boundary(client_interfaces, "Домен: Фронт") {
+        Container(public_api, "Public API", "Nginx", "Маршрутизатор пользовательских запросов")
+        Container(web_ui, "Web UI", "React", "Интерфейс управления для пользователей")
+        Container(mobile_app, "Mobile App", "React Native", "Мобильное приложение для монтажников")
+        Container(admin_panel, "Admin Panel", "React", "Интерфейс для администраторов")
+    }
+
+
+}
+
+' Пользователи -> Фронт
+Rel(user, public_api, "HTTPS", "Пользователь")
+Rel(installer, public_api, "HTTPS", "Монтажник")
+Rel(admin, admin_panel, "HTTPS", "Администратор")
+Rel(admin, monitoring, "HTTPS", "Администратор")
+
+' Фронт -> API Gateway -> Сервисы
+Rel(public_api, web_ui, "HTTPS", "Пользователь")
+Rel(public_api, mobile_app, "HTTPS", "Пользователь")
+Rel(web_ui, api_gateway, "", "HTTPS")
+Rel(mobile_app, api_gateway, "", "HTTPS")
+Rel(admin_panel, api_gateway, "", "HTTPS")
+Rel(api_gateway, device_service, "gRPC", "Управление устройствами")
+Rel(api_gateway, rules_engine, "gRPC", "Сценарии")
+
+' Устройства <-> MQTT
+Rel(device_service, mqtt_broker, "MQTT", "Команды")
+Rel(user_device, mqtt_broker, "MQTT", "Данные с датчиков")
+Rel(partner_device, partner_api, "HTTPS/MQTT", "Интеграция партнёров")
+Rel(partner_api, event_bus, "Регистрация устройств", "Kafka")
+
+' Авторизация
+Rel(api_gateway, auth_service, "HTTPS", "Авторизация")
+
+' Event Bus -> Автоматизация
+Rel(rules_engine, event_bus, "Kafka", "Триггеры и действия")
+Rel(device_service, event_bus, "Kafka", "Триггеры")
+
+' Базы данных
+Rel(device_service, device_db, "SQL", "Метаданные")
+Rel(auth_service, user_db, "SQL", "Профили")
+Rel(rules_engine, scenario_db, "SQL", "Правила")
+
+@enduml

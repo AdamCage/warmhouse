@@ -1,0 +1,31 @@
+@startuml
+actor "Пользователь" as user
+participant "Public API" as public_api
+participant "API Gateway" as api_gateway
+participant "DeviceAPIHandler" as handler
+participant "DeviceManager" as manager
+participant "ConfigValidator" as validator
+participant "DeviceRepository" as repo
+participant "MQTTClient" as mqtt
+participant "EventProducer" as event_producer
+participant "PostgreSQL" as pg
+participant "Kafka" as kafka
+
+user -> public_api: POST /register-device
+public_api -> api_gateway: Перенаправление
+api_gateway -> handler: Вызов HandleRegisterDevice
+handler -> manager: device := ParseRequest()
+manager -> validator: Validate(device.Config)
+validator --> manager: ОК/Ошибка
+manager -> repo: repo.Save(device)
+repo --> pg: INSERT INTO devices
+pg --> repo: Успех
+manager -> mqtt: mqtt.PublishCommand("register", device.ID)
+mqtt --> MQTTBroker: MQTT-сообщение
+manager -> event_producer: PublishDeviceRegistered(device.ID)
+event_producer --> kafka: Отправка события
+manager --> handler: Успех
+handler --> api_gateway: 200 OK
+api_gateway --> public_api: Ответ
+public_api --> user: Устройство зарегистрировано
+@enduml

@@ -1,0 +1,87 @@
+@startuml
+!define RECTANGLE class
+skinparam rectangle {
+    backgroundColor<<DB>> #f2f2f2
+    borderColor<<DB>> black
+}
+
+title ER-диаграмма: Единая БД для MVP "Тёплый Дом"
+
+' === Auth Service ===
+package "Auth Service" <<DB>> {
+    entity "users" {
+        id UUID [PK]
+        email VARCHAR(255) [UNIQUE]
+        password_hash TEXT
+    }
+
+    entity "roles" {
+        id UUID [PK]
+        name VARCHAR(50) [UNIQUE]
+        description TEXT
+    }
+
+    entity "user_roles" {
+        user_id UUID [PK]
+        role_id UUID [PK]
+    }
+}
+
+users }o--o{ user_roles : "1..*"
+roles }o--o{ user_roles : "1..*"
+
+' === Device Service ===
+package "Device Service" <<DB>> {
+    entity "device_types" {
+        id UUID [PK]
+        name VARCHAR(50) [UNIQUE]
+        category VARCHAR(50)  -- (sensor, relay, controller)
+        protocol VARCHAR(20)  -- (MQTT, Zigbee, CoAP)
+    }
+
+    entity "devices" {
+        id UUID [PK]
+        name VARCHAR(100)
+        serial_number VARCHAR(50) [UNIQUE]
+        type_id UUID  -- (внешний ключ к device_types.id)
+        house_id UUID
+        is_online BOOLEAN
+        last_seen TIMESTAMP
+    }
+}
+
+device_types }o--o{ devices : "1..*"
+
+' === Rules Engine ===
+package "Rules Engine" <<DB>> {
+    entity "scenarios" {
+        id UUID [PK]
+        name VARCHAR(100)
+        description TEXT
+        enabled BOOLEAN
+        house_id VARCHAR(36)  -- (UUID в строке)
+        triggers JSON
+        actions JSON
+    }
+}
+
+' === Monolith (legacy) ===
+package "Monolith (Legacy)" <<DB>> {
+    entity "sensors" {
+        id SERIAL [PK]
+        name VARCHAR(100)
+        type VARCHAR(50)
+        location VARCHAR(100)
+        value FLOAT
+        unit VARCHAR(20)
+        status VARCHAR(20)
+        last_updated TIMESTAMP
+        created_at TIMESTAMP
+    }
+}
+
+' === Связи ===
+users }o--o{ devices : "1..*"  ' Пользователь -> Устройства
+users }o--o{ scenarios : "1..*"  ' Пользователь -> Сценарии
+device_types }o--o{ devices : "1..*"  ' Тип устройства -> Устройство
+@enduml

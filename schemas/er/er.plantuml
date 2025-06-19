@@ -1,0 +1,148 @@
+@startuml
+!define RECTANGLE class
+skinparam rectangle {
+    backgroundColor<<DB>> #f2f2f2
+    borderColor<<DB>> black
+}
+
+title ER-диаграмма: Все БД системы "Тёплый Дом" + Расширенные сущности
+
+' === User DB ===
+package "User DB" <<DB>> {
+    entity "users" {
+        id UUID [PK]
+        email VARCHAR(255) [UNIQUE]
+        password_hash TEXT
+        created_at TIMESTAMP
+    }
+
+    entity "roles" {
+        id UUID [PK]
+        name VARCHAR(50) [UNIQUE]
+        description TEXT
+    }
+
+    entity "user_roles" {
+        user_id UUID [PK]
+        role_id UUID [PK]
+    }
+
+    entity "sessions" {
+        id UUID [PK]
+        user_id UUID
+        token TEXT [UNIQUE]
+        expires_at TIMESTAMP
+    }
+
+    entity "tokens" {
+        id UUID [PK]
+        user_id UUID
+        refresh_token TEXT [UNIQUE]
+        revoked BOOLEAN
+    }
+}
+
+users }o--o{ user_roles : "1..*"
+roles }o--o{ user_roles : "1..*"
+users }o--o{ sessions : "1..*"
+users }o--o{ tokens : "1..*"
+
+' === Device DB ===
+package "Device DB" <<DB>> {
+    entity "houses" {
+        id UUID [PK]
+        user_id UUID
+        address TEXT
+        area_m2 INT
+        floors INT
+    }
+
+    entity "devices" {
+        id UUID [PK]
+        house_id UUID
+        type_id UUID
+        serial_number VARCHAR(50) [UNIQUE]
+        name VARCHAR(100)
+        is_online BOOLEAN
+        last_seen TIMESTAMP
+    }
+
+    entity "device_types" {
+        id UUID [PK]
+        name VARCHAR(50) [UNIQUE]
+        category VARCHAR(50)
+        protocol VARCHAR(20)
+    }
+
+    entity "device_configurations" {
+        device_id UUID [PK]
+        config_key VARCHAR(100) [PK]
+        config_value TEXT
+    }
+
+    entity "telemetry_data" {
+        id UUID [PK]
+        device_id UUID
+        timestamp TIMESTAMP
+        value JSONB
+    }
+
+    entity "modules" {
+        id UUID [PK]
+        house_id UUID
+        name VARCHAR(100)
+        module_type VARCHAR(50)  -- (например: lighting, security, climate)
+    }
+
+    entity "module_devices" {
+        module_id UUID [PK]
+        device_id UUID [PK]
+    }
+}
+
+houses }o--o{ devices : "1..*"
+devices }o--o{ device_types : "1..1"
+devices }o--o{ device_configurations : "1..*"
+devices }o--o{ telemetry_data : "1..*"
+houses }o--o{ modules : "1..*"
+modules }o--o{ module_devices : "1..*"
+devices }o--o{ module_devices : "1..*"
+
+' === Scenarios DB ===
+package "Scenarios DB" <<DB>> {
+    entity "scenarios" {
+        id UUID [PK]
+        device_id UUID
+        name VARCHAR(100)
+        description TEXT
+        enabled BOOLEAN
+        created_by UUID
+        created_at TIMESTAMP
+    }
+
+    entity "triggers" {
+        id UUID [PK]
+        scenario_id UUID
+        trigger_type VARCHAR(50)
+        trigger_data JSON
+    }
+
+    entity "actions" {
+        id UUID [PK]
+        scenario_id UUID
+        action_type VARCHAR(50)
+        action_data JSON
+    }
+
+    entity "conditions" {
+        id UUID [PK]
+        trigger_id UUID
+        condition_type VARCHAR(50)
+        value TEXT
+    }
+}
+
+scenarios }o--o{ triggers : "1..*"
+scenarios }o--o{ actions : "1..*"
+triggers }o--o{ conditions : "1..*"
+@enduml

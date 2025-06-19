@@ -1,0 +1,53 @@
+@startuml
+!include <C4/C4_Component>
+
+title Компонентная диаграмма: Partner API Gateway
+
+System_Boundary(partner_api, "Partner API Gateway", "Go") {
+    Container_Boundary(protocol_adapters, "Протокольные адаптеры") {
+        Component(mqtt_adapter, "MQTT Adapter", "Go", "Обработка MQTT-подключений от партнерских устройств")
+        Component(https_adapter, "HTTPS Adapter", "Go", "Обработка REST-запросов от партнерских устройств")
+    }
+
+    Container_Boundary(device_management, "Управление устройствами") {
+        Component(device_router, "Device Router", "Go", "Маршрутизация запросов к соответствующему адаптеру")
+        Component(device_registry, "Device Registry", "Go", "Регистрация и управление метаданными устройств")
+    }
+
+    Container_Boundary(event_integration, "Интеграция с Event Bus") {
+        Component(event_producer, "Event Producer", "Go", "Публикация событий в Kafka")
+        Component(event_consumer, "Event Consumer", "Go", "Подписка на события из Kafka")
+    }
+
+    Container_Boundary(config_management, "Управление конфигурацией") {
+        Component(config_loader, "Config Loader", "Go", "Загрузка конфигураций для партнерских интеграций")
+        Component(config_validator, "Config Validator", "Go", "Проверка корректности конфигураций")
+    }
+
+    Component(logging_metrics, "Logging & Metrics", "OTLP", "Сбор логов и метрик")
+}
+
+System_Ext(partner_device, "Устройство партнёра", "Стороннее IoT-устройство")
+Container(event_bus, "Event Bus", "Kafka")
+Container(monitoring, "Monitoring", "Prometheus/Grafana", "Мониторинг и логирование")
+
+' Связи
+Rel(partner_device, mqtt_adapter, "MQTT", "Подключение через MQTT")
+Rel(partner_device, https_adapter, "HTTPS", "REST-запросы от устройства")
+
+Rel(mqtt_adapter, device_router, "MQTT", "Передача данных устройству")
+Rel(https_adapter, device_router, "HTTPS", "Передача данных устройству")
+
+Rel(device_router, device_registry, "gRPC", "Регистрация/обновление устройств")
+
+Rel(device_registry, event_producer, "Kafka", "События регистрации устройств")
+Rel(event_consumer, device_router, "Kafka", "Триггеры для управления устройствами")
+
+Rel(config_loader, config_validator, "Validation", "Проверка конфигураций")
+Rel(config_validator, device_router, "Конфигурация", "Настройка маршрутов")
+
+Rel(event_producer, event_bus, "Kafka", "Публикация событий")
+Rel(event_consumer, event_bus, "Kafka", "Подписка на события")
+
+Rel(logging_metrics, monitoring, "OTLP", "Метрики и трейсинг")
+@enduml
