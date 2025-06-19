@@ -1,0 +1,55 @@
+@startuml
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+title Контейнерная диаграмма: MVP "Тёплый Дом"
+
+Person(user, "Пользователь", "Владелец умного дома\n- Управляет системой\n- Просматривает температуру")
+
+System_Ext(partner_device, "Устройство партнёра", "Temperature API\n(Имитация датчика температуры)")
+
+System_Boundary(system, "Экосистема Умного Дома") {
+
+    System_Boundary(StranglerFig, "MVP Микросервисов StranglerFig") {
+        Container_Boundary(infra, "Инфраструктура") {
+            Container(api_gateway, "API Gateway", "Nginx", "Маршрутизация через Nginx")
+        }
+
+        Container_Boundary(users, "Пользователи") {
+            Container(auth_service, "Auth Service", "FastAPI", "Регистрация, авторизация")
+        }
+
+        Container_Boundary(devices, "Устройства") {
+            Container(device_service, "Device Service", "FastAPI", "Управление устройствами")
+        }
+
+        Container_Boundary(automation, "Автоматизация") {
+            Container(rules_engine, "Rules Engine", "FastAPI", "Сценарии автоматизации")
+        }
+    }
+
+    System_Boundary(legacy, "Монолит") {
+        Container(monolith, "Monolith App", "Go", "Старый код (legacy)")
+
+        ContainerDb(shared_db, "Shared DB", "PostgreSQL", "Единая БД для всех сервисов")
+    }
+
+}
+
+' Связи
+Rel(user, api_gateway, "HTTPS", "Через API Gateway")
+
+Rel(api_gateway, auth_service, "HTTPS", "Auth Service")
+Rel(api_gateway, device_service, "HTTPS", "Device Service")
+Rel(api_gateway, rules_engine, "HTTPS", "Rules Engine")
+Rel(api_gateway, monolith, "HTTPS", "Монолит")
+
+Rel(auth_service, shared_db, "SQL", "PostgreSQL")
+Rel(device_service, shared_db, "SQL", "PostgreSQL")
+Rel(rules_engine, shared_db, "SQL", "PostgreSQL")
+Rel(monolith, shared_db, "SQL", "PostgreSQL")
+
+Rel(partner_device, monolith, "HTTPS", "Интеграция с температурным датчиком")
+Rel(partner_device, device_service, "HTTPS", "Интеграция с температурным датчиком")
+
+@enduml
